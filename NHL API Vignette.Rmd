@@ -1,0 +1,164 @@
+---
+title: "ST 558 Project 1"
+author: "Kera Whitley"
+date: "6/9/2021" 
+output: 
+  html_document:
+    toc: yes
+---
+
+```{r packages}
+library(httr)
+library(jsonlite)
+library(tidyverse)
+```
+
+You should write functions to contact the NHL records API for the endpoints listed below. The functions should return well-formatted, parsed data (usually a data frame). Where possible, the user should have the option to specify the franchise of choice by both name and ID number - you’ll need to map the names to ID numbers yourself.
+
+– /franchise (Returns id, firstSeasonId and lastSeasonId and name of every team in the history of the NHL)
+```{r franchise}
+Franchise <- function(name){
+  base_url <- "https://records.nhl.com/site/api/franchise?"
+  get_franch <- GET(base_url)
+  get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
+  get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
+  franch.list <- as_tibble(get_franch_json$data) %>% rename(TeamId = mostRecentTeamId)
+  if (is.character(name)) 
+    return(franch.list %>% 
+             filter(fullName == name | teamCommonName == name | teamPlaceName == name) %>%
+             select(2:8)) else
+    return(franch.list %>% filter(TeamId == name) %>% select(2:8))
+  
+  invisible()
+}
+
+Franchise("Boston Bruins")
+Franchise("Sharks")
+Franchise("New York")
+Franchise(18)
+```
+
+– /franchise-team-totals (Returns Total stats for every franchise (ex roadTies, roadWins, etc)) 
+```{r}
+FranchiseTotals <- function(id){
+  base_url <- "https://records.nhl.com/site/api/franchise-team-totals"
+  get_franch <- GET(base_url)
+  get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
+  get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
+  totsList <- as_tibble(get_franch_json$data) %>% rename(teamAbbrev = triCode) %>% select(2:30)
+  return(totsList)
+
+  invisible()
+}
+
+FranchiseTotals(6)
+```
+
+– /site/api/franchise-season-records?cayenneExp=franchiseId=ID (Drill-down into season records for a specific franchise)
+```{r}
+SeasonRecords <- function(id){
+  base_url <- "https://records.nhl.com/site/api/franchise-season-records?cayenneExp=franchiseId"
+  full_url <- paste0(base_url, "=", id)
+  get_franch <- GET(full_url)
+  get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
+  get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
+  totsList <- as_tibble(get_franch_json$data) %>% select(2:57)
+  return(totsList)
+
+  invisible()
+}
+
+SeasonRecords(6)
+```
+
+– /franchise-goalie-records?cayenneExp=franchiseId=ID (Goalie records for the specified franchise) 
+```{r}
+GoalieRecords <- function(id){
+  base_url <- "https://records.nhl.com/site/api/franchise-goalie-records?cayenneExp=franchiseId"
+  full_url <- paste0(base_url, "=", id)
+  get_franch <- GET(full_url)
+  get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
+  get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
+  GoalieList <- as_tibble(get_franch_json$data) %>% select(2:29) 
+  return(GoalieList)
+
+  invisible()
+}
+
+GoalieRecords(6)
+```
+
+– /franchise-skater-records?cayenneExp=franchiseId=ID (Skater records, same interaction as goalie endpoint)
+```{r}
+SkaterRecords <- function(id){
+  base_url <- "https://records.nhl.com/site/api/franchise-skater-records?cayenneExp=franchiseId"
+  full_url <- paste0(base_url, "=", id)
+  get_franch <- GET(full_url)
+  get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
+  get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
+  skaterList <- as_tibble(get_franch_json$data) %>% select(2:31) #%>% rename(teamAbbrev = triCode)
+  return(skaterList)
+
+  invisible()
+}
+
+SkaterRecords(6)
+```
+
+– /site/api/franchise-detail?cayenneExp=mostRecentTeamId=ID (Admin history and retired numbers)
+```{r}
+FranchiseDetails <- function(id){
+  base_url <- "https://records.nhl.com/site/api/franchise-detail?cayenneExp=mostRecentTeamId"
+  full_url <- paste0(base_url, "=", id)
+  get_franch <- GET(full_url)
+  get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
+  get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
+  detailList <- as_tibble(get_franch_json$data) %>% select(2:13)
+  return(detailList)
+
+  invisible()
+}
+
+FranchiseDetails(6)
+```
+
+• You should write a function to contact the NHL stats API for the ?expand=team.stats modifier. The function should be able to take a single team or return data from all teams.
+```{r}
+TeamStats <- function(teamID = NULL){
+  base_url <- "https://statsapi.web.nhl.com/api/v1/teams"
+  if (is.null(teamID)) full_url <- paste0(base_url, "?expand=team.stats") else
+    full_url <- paste0(base_url, "/", teamID, "?expand=team.stats")
+  get_stats <- GET(full_url)
+  get_stats_text <- content(get_stats, as = "text", encoding = "UTF-8")
+  get_stats_json <- fromJSON(get_stats_text, flatten = TRUE)
+  TeamList <- as_tibble(get_stats_json$teams) %>% select(2:28)
+  return(TeamList)
+  
+  invisible()
+}
+
+TeamStats()
+TeamStats(6)
+```
+
+• You should write a wrapper function that is essentially a one-stop-shop for the user to access any of the API endpoints you did above. That is, this function should simply call the appropriate endpoint as per the users request (including any modifiers, teamIDs, etc.) – Note: This article may help you with contacting the API.
+```{r}
+
+```
+
+• Once you have the functions to query the data, you should perform a basic exploratory data analysis (EDA). Not all things reported need to show something interesting or meaningful (i.e. graphs that show no relationship are fine) but each graph should make sense to look at and each graph should be discussed. I know many of you don’t know hockey and that is ok! Just do your best and ask if you aren’t sure what something means. A few requirements about your EDA are below: 
+
+– You should data from at least two endpoints (possibly combining them into one) 
+
+–You should create at least two new variables that are functions of the variables from a data set you use
+
+– You should create some contingency tables
+
+You should create numerical summaries for some quantitative variables at each setting of some of your categorical variables
+
+– You should create at least five plots utilizing coloring, grouping, etc. All plots should have nice labels and titles.
+
+∗ You should have at least one bar plot, one histogram, one box plot, and one scatter plot
+
+• Your code chunks should be shown in the final document unless they are set up chunks or other behind
+the scenes things that aren’t important.

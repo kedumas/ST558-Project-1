@@ -17,22 +17,24 @@ You should write functions to contact the NHL records API for the endpoints list
 
 – /franchise (Returns id, firstSeasonId and lastSeasonId and name of every team in the history of the NHL)
 ```{r franchise}
-Franchise <- function(name){
+Franchise <- function(name = NULL){
   base_url <- "https://records.nhl.com/site/api/franchise?"
   get_franch <- GET(base_url)
   get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
-  franch.list <- as_tibble(get_franch_json$data) %>% rename(TeamId = mostRecentTeamId)
+  franch.list <- as_tibble(get_franch_json$data) %>% rename(franchiseId = id) 
+  #id was confirmed to be franchiseId by comparing to other API calls
   if (is.character(name)) 
     return(franch.list %>% 
-             filter(fullName == name | teamCommonName == name | teamPlaceName == name) %>%
-             select(2:8)) else
-    return(franch.list %>% filter(TeamId == name) %>% select(2:8))
+             filter(fullName == name | teamCommonName == name | teamPlaceName == name)) else 
+               if (is.null(name)) return(franch.list) else
+                 return(franch.list %>% filter(franchiseId == name)) 
   
   invisible()
 }
 
-Franchise("Boston Bruins")
+b <- Franchise()
+t1 <- Franchise("Boston Bruins")
 Franchise("Sharks")
 Franchise("New York")
 Franchise(18)
@@ -40,17 +42,20 @@ Franchise(18)
 
 – /franchise-team-totals (Returns Total stats for every franchise (ex roadTies, roadWins, etc)) 
 ```{r}
-FranchiseTotals <- function(id){
+FranchiseTotals <- function(id = NULL){
   base_url <- "https://records.nhl.com/site/api/franchise-team-totals"
   get_franch <- GET(base_url)
   get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
   totsList <- as_tibble(get_franch_json$data) %>% rename(teamAbbrev = triCode) %>% select(2:30)
+  totsList$activeFranchise <- ifelse(totsList$activeFranchise == 1, TRUE, FALSE) 
+  # Change activeFranchise from 1/0 to logical to match later API calls
   return(totsList)
 
   invisible()
 }
 
+FranchiseTotals()
 FranchiseTotals(6)
 ```
 
@@ -62,7 +67,7 @@ SeasonRecords <- function(id){
   get_franch <- GET(full_url)
   get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
-  totsList <- as_tibble(get_franch_json$data) %>% select(2:57)
+  totsList <- as_tibble(get_franch_json$data) %>% select(2:57) %>% rename(fullName = franchiseName)
   return(totsList)
 
   invisible()
@@ -79,7 +84,7 @@ GoalieRecords <- function(id){
   get_franch <- GET(full_url)
   get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
-  GoalieList <- as_tibble(get_franch_json$data) %>% select(2:29) 
+  GoalieList <- as_tibble(get_franch_json$data) %>% select(2:29) %>% rename(fullName = franchiseName)
   return(GoalieList)
 
   invisible()
@@ -96,13 +101,14 @@ SkaterRecords <- function(id){
   get_franch <- GET(full_url)
   get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
-  skaterList <- as_tibble(get_franch_json$data) %>% select(2:31) #%>% rename(teamAbbrev = triCode)
+  skaterList <- as_tibble(get_franch_json$data) %>% select(2:31) %>% rename(fullName = franchiseName)
   return(skaterList)
 
   invisible()
 }
 
 SkaterRecords(6)
+SkaterRecords(23)
 ```
 
 – /site/api/franchise-detail?cayenneExp=mostRecentTeamId=ID (Admin history and retired numbers)
@@ -113,7 +119,7 @@ FranchiseDetails <- function(id){
   get_franch <- GET(full_url)
   get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
-  detailList <- as_tibble(get_franch_json$data) %>% select(2:13)
+  detailList <- as_tibble(get_franch_json$data) %>% select(2:13) %>% rename(fullName = teamFullName, activeFranchise = active)
   return(detailList)
 
   invisible()
@@ -124,26 +130,73 @@ FranchiseDetails(6)
 
 • You should write a function to contact the NHL stats API for the ?expand=team.stats modifier. The function should be able to take a single team or return data from all teams.
 ```{r}
-TeamStats <- function(teamID = NULL){
+TeamStats <- function(name = NULL, venue = FALSE){
   base_url <- "https://statsapi.web.nhl.com/api/v1/teams"
-  if (is.null(teamID)) full_url <- paste0(base_url, "?expand=team.stats") else
-    full_url <- paste0(base_url, "/", teamID, "?expand=team.stats")
+  if (is.null(name)) full_url <- paste0(base_url, "?expand=team.stats") else
+    full_url <- paste0(base_url, "/", name, "?expand=team.stats")
   get_stats <- GET(full_url)
   get_stats_text <- content(get_stats, as = "text", encoding = "UTF-8")
   get_stats_json <- fromJSON(get_stats_text, flatten = TRUE)
-  TeamList <- as_tibble(get_stats_json$teams) %>% select(2:28)
-  return(TeamList)
+  TeamList <- as_tibble(get_stats_json$teams) %>% 
+    select(!(contains(c("link", "Url", "franchise.", "short"))), -1) %>% 
+    rename(teamAbbrev = abbreviation, teamCommonName = teamName, teamPlaceName = locationName, fullName = name)
+    # Rename was used to match other API call variable names
+  
+  # You have the option of returning venue information or not. The default is to not include venue information
+  if (isTRUE(venue)) return(TeamList) else
+    return(TeamList %>% select(!contains("venue")))
   
   invisible()
 }
 
 TeamStats()
+
+TeamStats(6, TRUE)
 TeamStats(6)
 ```
 
 • You should write a wrapper function that is essentially a one-stop-shop for the user to access any of the API endpoints you did above. That is, this function should simply call the appropriate endpoint as per the users request (including any modifiers, teamIDs, etc.) – Note: This article may help you with contacting the API.
-```{r}
+```{r message=TRUE}
+# If all optional inputs are not changed from default then generic data will be given for all franchises. 
+# The variable name is used for franchise input (either by franchise ID or team name). 
+# The variable position will pull goalie information (g), skater information (s), both (b) or neither if NULL.
+# the variable venue is a logical which indicates if venue information will be returned.
 
+StatsNHL <- function(name = NULL, position = NULL, venue = FALSE){
+  
+  join1 <- suppressMessages(left_join(Franchise(name), FranchiseTotals(id = name)))
+  
+  join2 <- suppressMessages(left_join(join1, TeamStats(name, venue)))
+  
+  join3 <- suppressMessages(left_join(join2, FranchiseDetails(id = name)))
+
+  join4 <- suppressMessages(left_join(join3, GoalieRecords(id = name)))
+  
+  join5 <- suppressMessages(left_join(join3, SkaterRecords(id = name)))
+  
+  join6 <- suppressMessages(left_join(join4, SkaterRecords(id = name)))
+  
+  if (is.null(position)) return(join2) else
+    if (position == "g") return(join4) else
+      if (position == "s") return(join5) else 
+        if (position == "b") return(join6) else
+          return("Please input a value position.")
+  
+  #if (!is.null(name)) return()
+  
+  #Franchise(name)
+  #FranchiseTotals(id)
+  #GoalieRecords(id)
+  #SeasonRecords(id)
+  #SkaterRecords(id)
+  #FranchiseDetails(id)
+  #TeamStats(name, venue)
+  
+}
+
+StatsNHL()
+StatsNHL(name = 6)
+StatsNHL(position = "s")
 ```
 
 • Once you have the functions to query the data, you should perform a basic exploratory data analysis (EDA). Not all things reported need to show something interesting or meaningful (i.e. graphs that show no relationship are fine) but each graph should make sense to look at and each graph should be discussed. I know many of you don’t know hockey and that is ok! Just do your best and ask if you aren’t sure what something means. A few requirements about your EDA are below: 

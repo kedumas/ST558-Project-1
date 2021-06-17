@@ -3,11 +3,11 @@ title: "ST 558 Project 1"
 author: "Kera Whitley"
 date: "6/9/2021" 
 output: 
-  html_document:
+  github_document:
     toc: yes
 ---
 
-```{r packages}
+```{r library}
 library(httr)
 library(jsonlite)
 library(tidyverse)
@@ -130,7 +130,7 @@ FranchiseDetails(6)
 
 • You should write a function to contact the NHL stats API for the ?expand=team.stats modifier. The function should be able to take a single team or return data from all teams.
 ```{r}
-TeamStats <- function(name = NULL, venue = FALSE){
+TeamStats <- function(name = NULL){
   base_url <- "https://statsapi.web.nhl.com/api/v1/teams"
   if (is.null(name)) full_url <- paste0(base_url, "?expand=team.stats") else
     full_url <- paste0(base_url, "/", name, "?expand=team.stats")
@@ -141,19 +141,17 @@ TeamStats <- function(name = NULL, venue = FALSE){
     select(!(contains(c("link", "Url", "franchise.", "short"))), -1) %>% 
     rename(teamAbbrev = abbreviation, teamCommonName = teamName, teamPlaceName = locationName, fullName = name)
     # Rename was used to match other API call variable names
-  
-  # You have the option of returning venue information or not. The default is to not include venue information
-  if (isTRUE(venue)) return(TeamList) else
-    return(TeamList %>% select(!contains("venue")))
-  
+  Season <- TeamList[[6]][[1]]
+  Stats <- Season[[1]][[1]]
+  return(list(Team = TeamList[,-6], Type = Season[,2:4], Stats = Stats))
+
   invisible()
 }
 
 TeamStats()
 
-TeamStats(6, TRUE)
 TeamStats(6)
-TeamStats(fran1$mostRecentTeamId[1])
+#TeamStats(6)
 ```
 
 • You should write a wrapper function that is essentially a one-stop-shop for the user to access any of the API endpoints you did above. That is, this function should simply call the appropriate endpoint as per the users request (including any modifiers, teamIDs, etc.) – Note: This article may help you with contacting the API.
@@ -161,18 +159,18 @@ TeamStats(fran1$mostRecentTeamId[1])
 # Here, franchise is always called so that the name can be converted to an ID number for the other API calls and the numbers should always be up to date.
 # If no team was designated in name, then the Montreal Canadiens will be returned for all 
 
-StatsNHL <- function(data, name = NULL, venue = FALSE){
+StatsNHL <- function(data, name = NULL){
 
   fran1 <- Franchise(name)
 
-  if (data == "franch") return(Franchise(name)) else
+  if (data == "franch") return(fran1) else
     if (data == "totals") return(FranchiseTotals(id = fran1$franchiseId)) else
       if (data == "seas.records") return(SeasonRecords(id = fran1$franchiseId[1])) else
         if (data == "g.records") return(GoalieRecords(id = fran1$franchiseId[1])) else
           if (data == "s.records") return(SkaterRecords(id = fran1$franchiseId[1])) else 
             if (data == "deets") return(FranchiseDetails(id = fran1$mostRecentTeamId[1])) else
-              if (is.null(name) & data == "stats") return(TeamStats(name, venue)) else
-                if (data == "stats") return(TeamStats(name = fran1$mostRecentTeamId[1], venue)) else
+              if (is.null(name) & data == "stats") return(TeamStats(name)) else
+                if (data == "stats") return(TeamStats(name = fran1$mostRecentTeamId[1])) else
                   return("Please use keywords 'franch', 'totals', 'seas.records', 'g.records', 's.records', 'deets', or 'stats'")
 
 }
@@ -184,22 +182,80 @@ StatsNHL("g.records", name = 3)
 StatsNHL("s.records", name = 27)
 StatsNHL("deets")
 StatsNHL("stats")
-StatsNHL("stats", name = "Carolina", TRUE)
+StatsNHL("stats", name = "Carolina")
 ```
 
 • Once you have the functions to query the data, you should perform a basic exploratory data analysis (EDA). Not all things reported need to show something interesting or meaningful (i.e. graphs that show no relationship are fine) but each graph should make sense to look at and each graph should be discussed. I know many of you don’t know hockey and that is ok! Just do your best and ask if you aren’t sure what something means. A few requirements about your EDA are below: 
 
 – You should data from at least two endpoints (possibly combining them into one) 
+```{r}
+recs <- StatsNHL("seas.records", 6)
+tots <- StatsNHL("totals", "Boston")
+ltots <- left_join(recs, tots)
 
-–You should create at least two new variables that are functions of the variables from a data set you use
+alltots <- StatsNHL("totals")
+allstat <- StatsNHL("stats")
+allcomb <- left_join(alltots, allstat$Team)
+
+skater <- StatsNHL("s.records", name = "Carolina")
+
+goal <- StatsNHL("g.records", name = "Bruins")
+```
+
+You should create at least two new variables that are functions of the variables from a data set you use
+```{r}
+winpercent <- (allcomb$wins/allcomb$gamesPlayed) * 100
+losspercent <- 100 - winpercent
+
+allcomb$wpercent <- winpercent
+allcomb$lpercent <- losspercent
+```
 
 – You should create some contingency tables
+```{r}
+table(skater$positionCode, skater$mostGoalsOneGame)
+
+table(skater$positionCode, skater$seasons)
+```
 
 You should create numerical summaries for some quantitative variables at each setting of some of your categorical variables
+```{r}
+
+```
 
 – You should create at least five plots utilizing coloring, grouping, etc. All plots should have nice labels and titles.
-
 ∗ You should have at least one bar plot, one histogram, one box plot, and one scatter plot
+```{r}
+# Bar plot
+a <- ggplot(skater, aes(mostPointsOneGame, fill = positionCode))
+
+a + geom_bar(position = "dodge") + 
+  labs(x = "Most Points Scored in a Game") +
+  scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
+
+
+# Histogram
+b <- ggplot(skater, aes(penaltyMinutes, fill = positionCode, color = positionCode))
+
+b + geom_histogram(position = "dodge", bins = 10)+
+  theme()
+
+# Box plot
+c <- ggplot(allcomb, aes(x = as.factor(gameTypeId), y = wpercent, fill = as.factor(gameTypeId)))
+
+c + geom_boxplot() + 
+  labs(x = "Game Type", y = "Win Percentage") + 
+  scale_x_discrete(labels = c("Regular Season", "Post Season")) +
+  theme() +
+  scale_fill_discrete(name = "Game Type", labels = c("Regular Season", "Post Season"))
+
+# Scatter plot
+d <- ggplot(skater, aes(penaltyMinutes, points, color = positionCode))
+
+d + geom_point()
+
+# Coder's choice
+```
 
 • Your code chunks should be shown in the final document unless they are set up chunks or other behind
 the scenes things that aren’t important.

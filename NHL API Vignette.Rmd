@@ -143,6 +143,7 @@ TeamStats <- function(name = NULL){
     # Rename was used to match other API call variable names
   Season <- TeamList[[6]][[1]]
   Stats <- Season[[1]][[1]]
+
   return(list(Team = TeamList[,-6], Type = Season[,2:4], Stats = Stats))
 
   invisible()
@@ -151,7 +152,6 @@ TeamStats <- function(name = NULL){
 TeamStats()
 
 TeamStats(6)
-#TeamStats(6)
 ```
 
 • You should write a wrapper function that is essentially a one-stop-shop for the user to access any of the API endpoints you did above. That is, this function should simply call the appropriate endpoint as per the users request (including any modifiers, teamIDs, etc.) – Note: This article may help you with contacting the API.
@@ -197,7 +197,7 @@ alltots <- StatsNHL("totals")
 allstat <- StatsNHL("stats")
 allcomb <- left_join(alltots, allstat$Team)
 
-skater <- StatsNHL("s.records", name = "Carolina")
+skater <- StatsNHL("s.records", name = "Bruins")
 
 goal <- StatsNHL("g.records", name = "Bruins")
 ```
@@ -230,31 +230,64 @@ You should create numerical summaries for some quantitative variables at each se
 a <- ggplot(skater, aes(mostPointsOneGame, fill = positionCode))
 
 a + geom_bar(position = "dodge") + 
-  labs(x = "Most Points Scored in a Game") +
+  labs(x = "Most Points Scored in a Game", title = "Single Game Max Points Scored by Position") +
+  theme(plot.title = element_text(hjust = 0.5)) +
   scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 
-
 # Histogram
-b <- ggplot(skater, aes(penaltyMinutes, fill = positionCode, color = positionCode))
+pos <- c("Center", "Defense", "Left Wing", "Right Wing")
+names(pos) <- c("C", "D", "L", "R")
 
-b + geom_histogram(position = "dodge", bins = 10)+
-  theme()
+b <- ggplot(skater, aes(penaltyMinutes, fill = positionCode))
+
+b + geom_histogram(position = "dodge", bins = 30) +
+  labs(x = "Total Career Penalty Minutes", title = "Career Penalty Minutes by Postion") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_grid(cols = vars(positionCode), labeller = labeller(positionCode = pos), scales = "free") +
+  scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 
 # Box plot
 c <- ggplot(allcomb, aes(x = as.factor(gameTypeId), y = wpercent, fill = as.factor(gameTypeId)))
 
 c + geom_boxplot() + 
-  labs(x = "Game Type", y = "Win Percentage") + 
+  labs(x = "Game Type", y = "Win Percentage", title = "Win Percentage by Game Type") + 
   scale_x_discrete(labels = c("Regular Season", "Post Season")) +
-  theme() +
+  theme(plot.title = element_text(hjust = 0.5)) +
   scale_fill_discrete(name = "Game Type", labels = c("Regular Season", "Post Season"))
 
 # Scatter plot
-d <- ggplot(skater, aes(penaltyMinutes, points, color = positionCode))
+d <- ggplot(skater, aes(mostPenaltyMinutesOneSeason, mostPointsOneSeason))
 
-d + geom_point()
+d + geom_point(aes(color = positionCode)) +
+  labs(x = "Most Penalty Minutes in One Season", y = "Most Points in One Season",
+       title = "Points Earned Aganist Penalty Minutes by Position") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 
-# Coder's choice
+# Plot below was adapted from https://ggplot2-book.org/facet.html
+s.nopos <- skater %>% select(-positionCode)
+
+d + geom_point(data = s.nopos, color = "grey") +
+  geom_point(aes(color = positionCode)) +
+  facet_wrap(~positionCode, labeller = labeller(positionCode = pos)) +
+  labs(x = "Most Penalty Minutes in One Season", y = "Most Points in One Season",
+       title = "Points Earned Aganist Penalty Minutes by Position") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
+
+# Coder's choice violin?
+goal$gpbin <- ifelse(goal$gamesPlayed <= 100, "lesseq100", "over100")
+
+e <- ggplot(goal, aes(as.factor(gpbin), mostWinsOneSeason))
+
+e + geom_violin(aes(color = gpbin)) +
+  geom_jitter(shape = 16, position = position_jitter(0.2)) +
+  labs(x = "Games Played", y = "Most Wins in One Season", title = "Max Single Season Wins by Games Played") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_x_discrete(labels = c("Less than or Equal to 100", "Over 100")) +
+  scale_color_discrete(name = "Games Played", labels = c("Less than or Equal to 100", "Over 100"))
+
+
 ```
 
 • Your code chunks should be shown in the final document unless they are set up chunks or other behind

@@ -11,6 +11,7 @@ output:
 library(httr)
 library(jsonlite)
 library(tidyverse)
+library(knitr)
 ```
 
 You should write functions to contact the NHL records API for the endpoints listed below. The functions should return well-formatted, parsed data (usually a data frame). Where possible, the user should have the option to specify the franchise of choice by both name and ID number - you’ll need to map the names to ID numbers yourself.
@@ -119,7 +120,8 @@ FranchiseDetails <- function(id){
   get_franch <- GET(full_url)
   get_franch_text <- content(get_franch, as = "text", encoding = "UTF-8")
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
-  detailList <- as_tibble(get_franch_json$data) %>% select(2:13) %>% rename(fullName = teamFullName, activeFranchise = active)
+  detailList <- as_tibble(get_franch_json$data) %>% select(2:13) %>% 
+    rename(fullName = teamFullName, activeFranchise = active)
   return(detailList)
 
   invisible()
@@ -151,7 +153,7 @@ TeamStats <- function(name = NULL){
 
 TeamStats()
 
-TeamStats(6)
+t <- TeamStats(6)
 ```
 
 • You should write a wrapper function that is essentially a one-stop-shop for the user to access any of the API endpoints you did above. That is, this function should simply call the appropriate endpoint as per the users request (including any modifiers, teamIDs, etc.) – Note: This article may help you with contacting the API.
@@ -173,6 +175,8 @@ StatsNHL <- function(data, name = NULL){
                 if (data == "stats") return(TeamStats(name = fran1$mostRecentTeamId[1])) else
                   return("Please use keywords 'franch', 'totals', 'seas.records', 'g.records', 's.records', 'deets', or 'stats'")
 
+  invisible()
+  
 }
 
 StatsNHL(data = "franch")
@@ -189,15 +193,17 @@ StatsNHL("stats", name = "Carolina")
 
 – You should data from at least two endpoints (possibly combining them into one) 
 ```{r}
-recs <- StatsNHL("seas.records", 6)
-tots <- StatsNHL("totals", "Boston")
-ltots <- left_join(recs, tots)
-
 alltots <- StatsNHL("totals")
 allstat <- StatsNHL("stats")
 allcomb <- left_join(alltots, allstat$Team)
 
-skater <- StatsNHL("s.records", name = "Bruins")
+
+s1 <- StatsNHL("s.records", name = 1)
+s5 <- StatsNHL("s.records", name = 5)
+s6 <- StatsNHL("s.records", name = 6)
+s10 <- StatsNHL("s.records", name = 10)
+
+skater <- rbind(s1, s5, s6, s10)
 
 goal <- StatsNHL("g.records", name = "Bruins")
 ```
@@ -213,14 +219,20 @@ allcomb$lpercent <- losspercent
 
 – You should create some contingency tables
 ```{r}
-table(skater$positionCode, skater$mostGoalsOneGame)
+table(skater$positionCode, skater$mostGoalsOneGame) %>% kable(caption = "Points by Skater Position for Selected Franchises")
 
-table(skater$positionCode, skater$seasons)
+table(skater$positionCode, skater$seasons) %>% kable(caption = "Number Seasons Played by Skater Position for Selected Franchises")
 ```
 
 You should create numerical summaries for some quantitative variables at each setting of some of your categorical variables
 ```{r}
+goal %>% select(!contains(c("Dates", "Id", "rookie", "over", "bin", "Name", "active", "Code"))) %>% summary() %>% kable(caption = "Bruins Goalie Stats")
 
+skater %>% select(!contains(c("Dates", "Id", "rookie", "over", "bin", "Name", "active", "Code"))) %>% summary() %>% kable( caption = "Skater Stats for Selected Franchises")
+
+skater %>% filter(franchiseId == 1) %>% select(!contains(c("Dates", "Id", "rookie", "over", "bin", "Name", "active", "Code"))) %>% summary() %>% kable( caption = "Montreal Canadiens Skater Stats")
+
+skater %>% filter(franchiseId == 6) %>% select(!contains(c("Dates", "Id", "rookie", "over", "bin", "Name", "active", "Code"))) %>% summary() %>% kable( caption = "Boston Bruins Skater Stats")
 ```
 
 – You should create at least five plots utilizing coloring, grouping, etc. All plots should have nice labels and titles.
@@ -235,16 +247,13 @@ a + geom_bar(position = "dodge") +
   scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 
 # Histogram
-pos <- c("Center", "Defense", "Left Wing", "Right Wing")
-names(pos) <- c("C", "D", "L", "R")
-
-b <- ggplot(skater, aes(penaltyMinutes, fill = positionCode))
+b <- ggplot(skater, aes(penaltyMinutes, fill = fullName))
 
 b + geom_histogram(position = "dodge", bins = 30) +
   labs(x = "Total Career Penalty Minutes", title = "Career Penalty Minutes by Postion") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  facet_grid(cols = vars(positionCode), labeller = labeller(positionCode = pos), scales = "free") +
-  scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
+  facet_wrap(vars(fullName), scales = "free") +
+  scale_fill_discrete(name = "Team")
 
 # Box plot
 c <- ggplot(allcomb, aes(x = as.factor(gameTypeId), y = wpercent, fill = as.factor(gameTypeId)))
@@ -266,6 +275,7 @@ d + geom_point(aes(color = positionCode)) +
 
 # Plot below was adapted from https://ggplot2-book.org/facet.html
 s.nopos <- skater %>% select(-positionCode)
+s.noteam <- skater %>% select(-fullName)
 
 d + geom_point(data = s.nopos, color = "grey") +
   geom_point(aes(color = positionCode)) +
@@ -275,6 +285,14 @@ d + geom_point(data = s.nopos, color = "grey") +
   theme(plot.title = element_text(hjust = 0.5)) + 
   scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 
+d + geom_point(data = s.noteam, color = "grey") +
+  geom_point(aes(color = fullName)) +
+  facet_wrap(~fullName) +
+  labs(x = "Most Penalty Minutes in One Season", y = "Most Points in One Season",
+       title = "Points Earned Aganist Penalty Minutes by Position") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  scale_color_discrete(name = "Team")
+
 # Coder's choice violin?
 goal$gpbin <- ifelse(goal$gamesPlayed <= 100, "lesseq100", "over100")
 
@@ -282,7 +300,8 @@ e <- ggplot(goal, aes(as.factor(gpbin), mostWinsOneSeason))
 
 e + geom_violin(aes(color = gpbin)) +
   geom_jitter(shape = 16, position = position_jitter(0.2)) +
-  labs(x = "Games Played", y = "Most Wins in One Season", title = "Max Single Season Wins by Games Played") +
+  labs(x = "Games Played", y = "Most Wins in One Season", 
+       title = "Max Single Season Bruins Goalie Wins by Games Played") +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_discrete(labels = c("Less than or Equal to 100", "Over 100")) +
   scale_color_discrete(name = "Games Played", labels = c("Less than or Equal to 100", "Over 100"))

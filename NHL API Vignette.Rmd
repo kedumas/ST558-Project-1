@@ -12,6 +12,7 @@ library(httr)
 library(jsonlite)
 library(tidyverse)
 library(knitr)
+library(xml2)
 ```
 
 You should write functions to contact the NHL records API for the endpoints listed below. The functions should return well-formatted, parsed data (usually a data frame). Where possible, the user should have the option to specify the franchise of choice by both name and ID number - you’ll need to map the names to ID numbers yourself.
@@ -27,8 +28,7 @@ Franchise <- function(name = NULL){
   #id was confirmed to be franchiseId by comparing to other API calls
   if (is.character(name)) 
     return(franch.list %>% 
-             filter(fullName == name | teamCommonName == name | teamPlaceName == name)) else 
-               if (is.null(name)) return(franch.list) else
+             filter(fullName == name | teamCommonName == name | teamPlaceName == name | teamAbbrev == name)) else               if (is.null(name)) return(franch.list) else
                  return(franch.list %>% filter(franchiseId == name)) 
   
   invisible()
@@ -122,12 +122,59 @@ FranchiseDetails <- function(id){
   get_franch_json <- fromJSON(get_franch_text, flatten = TRUE)
   detailList <- as_tibble(get_franch_json$data) %>% select(2:13) %>% 
     rename(fullName = teamFullName, activeFranchise = active)
-  return(detailList)
+  
+  names <- colnames(detailList)
+  cap <- detailList$captainHistory %>% read_xml(as_html = TRUE) %>% xml_text() %>% strsplit("\r\n\t")
+  coa <- detailList$coachingHistory %>% read_xml(as_html = TRUE) %>% xml_text() %>% strsplit("\r\n\t")
+  gmh <- detailList$generalManagerHistory %>% read_xml(as_html = TRUE) %>% xml_text() %>% strsplit("\r\n\t")
+  rns <- detailList$retiredNumbersSummary %>% read_xml(as_html = TRUE) %>% xml_text() %>% strsplit("\r\n\t")
+
+  a <- as.data.frame(matrix(rep(detailList), nrow = length(cap[[1]]), ncol = length(detailList), byrow = TRUE))
+  for (i in 1:length(cap[[1]])){
+    a[[2]][i] <- cap[[1]][i]
+  }
+  CaptainDetails <- as_tibble(a) 
+  colnames(CaptainDetails) <- names
+  CaptainDetails <- CaptainDetails %>% select(!contains(c("coach", "general", "retired")))
+  CaptainDetails <- CaptainDetails %>% unnest(c(activeFranchise, captainHistory, dateAwarded, directoryUrl,
+                                                firstSeasonId, heroImageUrl, mostRecentTeamId, teamAbbrev,
+                                                fullName))
+  
+  a <- as.data.frame(matrix(rep(detailList), nrow = length(coa[[1]]), ncol = length(detailList), byrow = TRUE))
+  for (i in 1:length(coa[[1]])){
+    a[[3]][i] <- coa[[1]][i]
+  }
+  CoachDetails <- as_tibble(a)
+  colnames(CoachDetails) <- names
+  CoachDetails <- CoachDetails %>% select(!contains(c("captain", "general", "retired")))
+  CoachDetails <- CoachDetails %>% unnest(c(activeFranchise, coachingHistory, dateAwarded, directoryUrl,
+                                            firstSeasonId, heroImageUrl, mostRecentTeamId, teamAbbrev, fullName))
+  
+  a <- as.data.frame(matrix(rep(detailList), nrow = length(gmh[[1]]), ncol = length(detailList), byrow = TRUE))
+  for (i in 1:length(gmh[[1]])){
+    a[[7]][i] <- gmh[[1]][i]
+  }
+  GMDetails <- as_tibble(a)
+  colnames(GMDetails) <- names
+  GMDetails <- GMDetails %>% select(!contains(c("captain", "coach", "retired")))
+  GMDetails <- GMDetails %>% unnest(c(activeFranchise, dateAwarded, directoryUrl, firstSeasonId,
+                                      generalManagerHistory, heroImageUrl, mostRecentTeamId, teamAbbrev, fullName))
+  
+  a <- as.data.frame(matrix(rep(detailList), nrow = length(rns[[1]]), ncol = length(detailList), byrow = TRUE))
+  for (i in 1:length(rns[[1]])){
+    a[[10]][i] <- rns[[1]][i]
+  }
+  RetiredDetails <- as_tibble(a)
+  colnames(RetiredDetails) <- names
+  RetiredDetails <- RetiredDetails %>% select(!contains(c("captain", "coach", "general")))
+  RetiredDetails <- RetiredDetails %>% unnest(c(activeFranchise, dateAwarded, directoryUrl, firstSeasonId, heroImageUrl, mostRecentTeamId, retiredNumbersSummary, teamAbbrev, fullName))
+  
+  return(list(CaptainDetails = CaptainDetails, CoachDetails = CoachDetails, GMDetails = GMDetails,
+              RetiredDetails = RetiredDetails))
 
   invisible()
 }
 
-FranchiseDetails(6)
 ```
 
 • You should write a function to contact the NHL stats API for the ?expand=team.stats modifier. The function should be able to take a single team or return data from all teams.
@@ -143,10 +190,10 @@ TeamStats <- function(name = NULL){
     select(!(contains(c("link", "Url", "franchise.", "short"))), -1) %>% 
     rename(teamAbbrev = abbreviation, teamCommonName = teamName, teamPlaceName = locationName, fullName = name)
     # Rename was used to match other API call variable names
-  Season <- TeamList[[6]][[1]]
-  Stats <- Season[[1]][[1]]
+  Season <- TeamList %>% unnest(teamStats)
+  Stats <-Season %>% unnest(splits)
 
-  return(list(Team = TeamList[,-6], Type = Season[,2:4], Stats = Stats))
+  return(Stats)
 
   invisible()
 }

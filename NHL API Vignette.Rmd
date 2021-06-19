@@ -4,7 +4,7 @@ author: "Kera Whitley"
 date: "6/9/2021" 
 output: 
   github_document:
-    toc: yes
+    toc: TRUE
 ---
 
 ```{r library}
@@ -34,8 +34,8 @@ Franchise <- function(name = NULL){
   invisible()
 }
 
-b <- Franchise()
-t1 <- Franchise("Boston Bruins")
+Franchise()
+Franchise("Boston Bruins")
 Franchise("Sharks")
 Franchise("New York")
 Franchise(18)
@@ -153,7 +153,7 @@ TeamStats <- function(name = NULL){
 
 TeamStats()
 
-t <- TeamStats(6)
+TeamStats(6)
 ```
 
 • You should write a wrapper function that is essentially a one-stop-shop for the user to access any of the API endpoints you did above. That is, this function should simply call the appropriate endpoint as per the users request (including any modifiers, teamIDs, etc.) – Note: This article may help you with contacting the API.
@@ -206,22 +206,38 @@ s10 <- StatsNHL("s.records", name = 10)
 skater <- rbind(s1, s5, s6, s10)
 
 goal <- StatsNHL("g.records", name = "Bruins")
+
+franch <- StatsNHL("franch")
 ```
 
 You should create at least two new variables that are functions of the variables from a data set you use
+
+– You should create some contingency tables
 ```{r}
 winpercent <- (allcomb$wins/allcomb$gamesPlayed) * 100
 losspercent <- 100 - winpercent
 
 allcomb$wpercent <- winpercent
 allcomb$lpercent <- losspercent
+
+allcomb$shuts <- ifelse(allcomb$shutouts < 100, allcomb$shuts <- "Less than 100", 
+                        ifelse(allcomb$shutouts < 200, allcomb$shuts <- "Less than 200", allcomb$shuts <-  "Over 200"))
+
+skater$skate.pos <- ifelse(skater$positionCode == "C", skater$skate.pos <- "Center", 
+                    ifelse(skater$positionCode == "D", skater$skate.pos <- "Defense", 
+                           ifelse(skater$positionCode == "L", skater$skate.pos <- "Left Wing", 
+                                  skater$skate.pos <- "Right Wing")))
 ```
 
-– You should create some contingency tables
 ```{r}
-table(skater$positionCode, skater$mostGoalsOneGame) %>% kable(caption = "Points by Skater Position for Selected Franchises")
+allfil <- allcomb %>% filter(gameTypeId == 2) 
+table(allfil$shuts, allfil$division.name) %>% kable(caption = "Regular Season Shutouts by Division")
 
-table(skater$positionCode, skater$seasons) %>% kable(caption = "Number Seasons Played by Skater Position for Selected Franchises")
+table(skater$skate.pos, skater$mostGoalsOneGame) %>% kable(caption = "Points by Skater Position for Selected Franchises")
+
+table(skater$skate.pos, skater$seasons) %>% kable(caption = "Number Seasons Played by Skater Position for Selected Franchises")
+
+
 ```
 
 You should create numerical summaries for some quantitative variables at each setting of some of your categorical variables
@@ -279,7 +295,7 @@ s.noteam <- skater %>% select(-fullName)
 
 d + geom_point(data = s.nopos, color = "grey") +
   geom_point(aes(color = positionCode)) +
-  facet_wrap(~positionCode, labeller = labeller(positionCode = pos)) +
+  facet_wrap(~positionCode, labeller = labeller(positionCode = s.nopos$skate.pos)) +
   labs(x = "Most Penalty Minutes in One Season", y = "Most Points in One Season",
        title = "Points Earned Aganist Penalty Minutes by Position") +
   theme(plot.title = element_text(hjust = 0.5)) + 

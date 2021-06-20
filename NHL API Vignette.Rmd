@@ -7,7 +7,7 @@ output:
     toc: TRUE
 ---
 
-```{r library}
+```{r libraries, include = FALSE}
 library(httr)
 library(jsonlite)
 library(tidyverse)
@@ -33,16 +33,10 @@ Franchise <- function(name = NULL){
   
   invisible()
 }
-
-Franchise()
-Franchise("Boston Bruins")
-Franchise("Sharks")
-Franchise("New York")
-Franchise(18)
 ```
 
 – /franchise-team-totals (Returns Total stats for every franchise (ex roadTies, roadWins, etc)) 
-```{r}
+```{r totals}
 FranchiseTotals <- function(id = NULL){
   base_url <- "https://records.nhl.com/site/api/franchise-team-totals"
   get_franch <- GET(base_url)
@@ -55,13 +49,10 @@ FranchiseTotals <- function(id = NULL){
 
   invisible()
 }
-
-FranchiseTotals()
-FranchiseTotals(6)
 ```
 
 – /site/api/franchise-season-records?cayenneExp=franchiseId=ID (Drill-down into season records for a specific franchise)
-```{r}
+```{r season}
 SeasonRecords <- function(id){
   base_url <- "https://records.nhl.com/site/api/franchise-season-records?cayenneExp=franchiseId"
   full_url <- paste0(base_url, "=", id)
@@ -73,12 +64,10 @@ SeasonRecords <- function(id){
 
   invisible()
 }
-
-SeasonRecords(6)
 ```
 
 – /franchise-goalie-records?cayenneExp=franchiseId=ID (Goalie records for the specified franchise) 
-```{r}
+```{r goalie}
 GoalieRecords <- function(id){
   base_url <- "https://records.nhl.com/site/api/franchise-goalie-records?cayenneExp=franchiseId"
   full_url <- paste0(base_url, "=", id)
@@ -90,12 +79,10 @@ GoalieRecords <- function(id){
 
   invisible()
 }
-
-GoalieRecords(6)
 ```
 
 – /franchise-skater-records?cayenneExp=franchiseId=ID (Skater records, same interaction as goalie endpoint)
-```{r}
+```{r skater}
 SkaterRecords <- function(id){
   base_url <- "https://records.nhl.com/site/api/franchise-skater-records?cayenneExp=franchiseId"
   full_url <- paste0(base_url, "=", id)
@@ -107,13 +94,10 @@ SkaterRecords <- function(id){
 
   invisible()
 }
-
-SkaterRecords(6)
-SkaterRecords(23)
 ```
 
 – /site/api/franchise-detail?cayenneExp=mostRecentTeamId=ID (Admin history and retired numbers)
-```{r}
+```{r details}
 FranchiseDetails <- function(id){
   base_url <- "https://records.nhl.com/site/api/franchise-detail?cayenneExp=mostRecentTeamId"
   full_url <- paste0(base_url, "=", id)
@@ -167,18 +151,19 @@ FranchiseDetails <- function(id){
   RetiredDetails <- as_tibble(a)
   colnames(RetiredDetails) <- names
   RetiredDetails <- RetiredDetails %>% select(!contains(c("captain", "coach", "general")))
-  RetiredDetails <- RetiredDetails %>% unnest(c(activeFranchise, dateAwarded, directoryUrl, firstSeasonId, heroImageUrl, mostRecentTeamId, retiredNumbersSummary, teamAbbrev, fullName))
+  RetiredDetails <- RetiredDetails %>% unnest(c(activeFranchise, dateAwarded, directoryUrl, firstSeasonId,
+                                                heroImageUrl, mostRecentTeamId, retiredNumbersSummary, teamAbbrev,
+                                                fullName))
   
   return(list(CaptainDetails = CaptainDetails, CoachDetails = CoachDetails, GMDetails = GMDetails,
               RetiredDetails = RetiredDetails))
 
   invisible()
 }
-
 ```
 
 • You should write a function to contact the NHL stats API for the ?expand=team.stats modifier. The function should be able to take a single team or return data from all teams.
-```{r}
+```{r stats}
 TeamStats <- function(name = NULL){
   base_url <- "https://statsapi.web.nhl.com/api/v1/teams"
   if (is.null(name)) full_url <- paste0(base_url, "?expand=team.stats") else
@@ -188,23 +173,21 @@ TeamStats <- function(name = NULL){
   get_stats_json <- fromJSON(get_stats_text, flatten = TRUE)
   TeamList <- as_tibble(get_stats_json$teams) %>% 
     select(!(contains(c("link", "Url", "franchise.", "short"))), -1) %>% 
-    rename(teamAbbrev = abbreviation, teamCommonName = teamName, teamPlaceName = locationName, fullName = name)
+    rename(teamAbbrev = abbreviation, teamCommonName = teamName, teamPlaceName = locationName,
+           fullName = name)
     # Rename was used to match other API call variable names
   Season <- TeamList %>% unnest(teamStats)
-  Stats <-Season %>% unnest(splits)
+  StatsNums <-Season %>% unnest(splits) %>% filter(!is.na(stat.gamesPlayed))
+  StatsRank <- Season %>% unnest(splits) %>% filter(is.na(stat.gamesPlayed))
 
-  return(Stats)
+  return(list(StatsNumers = StatsNums, StatsRank = StatsRank))
 
   invisible()
 }
-
-TeamStats()
-
-TeamStats(6)
 ```
 
 • You should write a wrapper function that is essentially a one-stop-shop for the user to access any of the API endpoints you did above. That is, this function should simply call the appropriate endpoint as per the users request (including any modifiers, teamIDs, etc.) – Note: This article may help you with contacting the API.
-```{r}
+```{r wrapper}
 # Here, franchise is always called so that the name can be converted to an ID number for the other API calls and the numbers should always be up to date.
 # If no team was designated in name, then the Montreal Canadiens will be returned for all 
 
@@ -230,7 +213,7 @@ StatsNHL(data = "franch")
 StatsNHL("totals")
 StatsNHL("seas.records", name = "New York")
 StatsNHL("g.records", name = 3)
-StatsNHL("s.records", name = 27)
+StatsNHL("s.records", name = "BOS")
 StatsNHL("deets")
 StatsNHL("stats")
 StatsNHL("stats", name = "Carolina")
@@ -242,14 +225,14 @@ StatsNHL("stats", name = "Carolina")
 ```{r}
 alltots <- StatsNHL("totals")
 allstat <- StatsNHL("stats")
-allcomb <- left_join(alltots, allstat$Team)
+allcomb <- left_join(alltots, allstat$StatsNumers)
+regseason <- allcomb %>% filter(gameTypeId == 2)
 
 
 s1 <- StatsNHL("s.records", name = 1)
 s5 <- StatsNHL("s.records", name = 5)
 s6 <- StatsNHL("s.records", name = 6)
 s10 <- StatsNHL("s.records", name = 10)
-
 skater <- rbind(s1, s5, s6, s10)
 
 goal <- StatsNHL("g.records", name = "Bruins")
@@ -274,6 +257,9 @@ skater$skate.pos <- ifelse(skater$positionCode == "C", skater$skate.pos <- "Cent
                     ifelse(skater$positionCode == "D", skater$skate.pos <- "Defense", 
                            ifelse(skater$positionCode == "L", skater$skate.pos <- "Left Wing", 
                                   skater$skate.pos <- "Right Wing")))
+
+regseason$dummyWins <- ifelse(regseason$wins < 1000, regseason$dummyWins <- "Under 1000 Wins", 
+                              regseason$dummyWins <- "1000 + Wins")
 ```
 
 ```{r}
@@ -283,8 +269,6 @@ table(allfil$shuts, allfil$division.name) %>% kable(caption = "Regular Season Sh
 table(skater$skate.pos, skater$mostGoalsOneGame) %>% kable(caption = "Points by Skater Position for Selected Franchises")
 
 table(skater$skate.pos, skater$seasons) %>% kable(caption = "Number Seasons Played by Skater Position for Selected Franchises")
-
-
 ```
 
 You should create numerical summaries for some quantitative variables at each setting of some of your categorical variables
@@ -336,32 +320,29 @@ d + geom_point(aes(color = positionCode)) +
   theme(plot.title = element_text(hjust = 0.5)) + 
   scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 
-# Plot below was adapted from https://ggplot2-book.org/facet.html
-s.nopos <- skater %>% select(-positionCode)
-s.noteam <- skater %>% select(-fullName)
-
-d + geom_point(data = s.nopos, color = "grey") +
-  geom_point(aes(color = positionCode)) +
-  facet_wrap(~positionCode, labeller = labeller(positionCode = s.nopos$skate.pos)) +
+d + geom_point(aes(color = positionCode)) +
+  facet_wrap(vars(positionCode), labeller = labeller(positionCode =
+                                                       c("Center", "Defense", "Left Wing", "Right Wing"))) +
   labs(x = "Most Penalty Minutes in One Season", y = "Most Points in One Season",
        title = "Points Earned Aganist Penalty Minutes by Position") +
   theme(plot.title = element_text(hjust = 0.5)) + 
   scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 
-d + geom_point(data = s.noteam, color = "grey") +
-  geom_point(aes(color = fullName)) +
-  facet_wrap(~fullName) +
-  labs(x = "Most Penalty Minutes in One Season", y = "Most Points in One Season",
-       title = "Points Earned Aganist Penalty Minutes by Position") +
+e <- ggplot(regseason, aes(goalsFor, goalsAgainst))
+
+e + geom_point(aes(color = dummyWins)) +
+  facet_wrap(vars(dummyWins)) +
+  labs(x = "Number of Goals For", y = "Number of Goals Against",
+       title = "Goals for and Against by Number of Wins") +
   theme(plot.title = element_text(hjust = 0.5)) + 
-  scale_color_discrete(name = "Team")
+  scale_color_discrete(name = "Position", labels = c("1000+ Wins", "Under 1000 Wins"))
 
 # Coder's choice violin?
 goal$gpbin <- ifelse(goal$gamesPlayed <= 100, "lesseq100", "over100")
 
-e <- ggplot(goal, aes(as.factor(gpbin), mostWinsOneSeason))
+f <- ggplot(goal, aes(as.factor(gpbin), mostWinsOneSeason))
 
-e + geom_violin(aes(color = gpbin)) +
+f + geom_violin(aes(color = gpbin)) +
   geom_jitter(shape = 16, position = position_jitter(0.2)) +
   labs(x = "Games Played", y = "Most Wins in One Season", 
        title = "Max Single Season Bruins Goalie Wins by Games Played") +

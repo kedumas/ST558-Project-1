@@ -14,11 +14,16 @@ Kera Whitley
 -   [Wrapper Function](#wrapper-function)
 -   [Using the Functions](#using-the-functions)
     -   [Gathering Information](#gathering-information)
--   [Creating New Variables](#creating-new-variables)
+    -   [Creating New Variables](#creating-new-variables)
 -   [Tables and Plots](#tables-and-plots)
     -   [Contingency Tables](#contingency-tables)
     -   [Numerical Summaries](#numerical-summaries)
     -   [Plots](#plots)
+        -   [Bar plot](#bar-plot)
+        -   [Histogram](#histogram)
+        -   [Box plot](#box-plot)
+        -   [Scatter plot](#scatter-plot)
+        -   [Violin Plot](#violin-plot)
 
 # Base Functions
 
@@ -247,7 +252,7 @@ goal <- StatsNHL("g.records", name = "Bruins")
 franch <- StatsNHL("franch")
 ```
 
-# Creating New Variables
+## Creating New Variables
 
 ``` r
 # Creating new
@@ -418,8 +423,9 @@ Selected League Summary Statistics, Regular Season
 
 ## Plots
 
+### Bar plot
+
 ``` r
-# Bar plot
 a <- ggplot(skater, aes(mostPointsOneGame, fill = positionCode))
 
 a + geom_bar(position = "dodge") + 
@@ -428,10 +434,11 @@ a + geom_bar(position = "dodge") +
   scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+### Histogram
 
 ``` r
-# Histogram
 b <- ggplot(skater, aes(penaltyMinutes, fill = fullName))
 
 b + geom_histogram(position = "dodge", bins = 30) +
@@ -441,10 +448,11 @@ b + geom_histogram(position = "dodge", bins = 30) +
   scale_fill_discrete(name = "Team")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+### Box plot
 
 ``` r
-# Box plot
 c <- ggplot(allComb, aes(x = as.factor(gameTypeId), y = winPercent, fill = as.factor(gameTypeId)))
 
 c + geom_boxplot() + 
@@ -454,10 +462,11 @@ c + geom_boxplot() +
   scale_fill_discrete(name = "Game Type", labels = c("Regular Season", "Post Season"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+### Scatter plot
 
 ``` r
-# Scatter plot
 d <- ggplot(skater, aes(mostPenaltyMinutesOneSeason, mostPointsOneSeason))
 
 d + geom_point(aes(color = positionCode)) +
@@ -467,7 +476,7 @@ d + geom_point(aes(color = positionCode)) +
   scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ``` r
 d + geom_point(aes(color = positionCode)) +
@@ -479,7 +488,7 @@ d + geom_point(aes(color = positionCode)) +
   scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->
 
 ``` r
 e <- ggplot(regSeason, aes(goalsFor, goalsAgainst))
@@ -492,11 +501,11 @@ e + geom_point(aes(color = dummyWins)) +
   scale_color_discrete(name = "Position", labels = c("1000+ Wins", "Under 1000 Wins"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-14-3.png)<!-- -->
+
+### Violin Plot
 
 ``` r
-# Coder's choice violin?
-
 f <- ggplot(goal, aes(as.factor(gamePlayedBin), mostWinsOneSeason))
 
 f + geom_violin(aes(color = gamePlayedBin)) +
@@ -508,4 +517,4 @@ f + geom_violin(aes(color = gamePlayedBin)) +
   scale_color_discrete(name = "Games Played", labels = c("Less than or Equal to 100", "Over 100"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-7.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->

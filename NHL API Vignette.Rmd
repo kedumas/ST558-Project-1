@@ -256,7 +256,7 @@ goal <- StatsNHL("g.records", name = "Bruins")
 franch <- StatsNHL("franch")
 ```
 
-# Creating New Variables
+## Creating New Variables
 ```{r}
 # Creating new
 winPercent <- (allComb$wins/allComb$gamesPlayed) * 100
@@ -318,16 +318,19 @@ regSeason %>% select("stat.wins", "stat.losses", "stat.ot", "stat.pts", "stat.go
 ```
 
 ## Plots
+
+### Bar plot
 ```{r}
-# Bar plot
 a <- ggplot(skater, aes(mostPointsOneGame, fill = positionCode))
 
 a + geom_bar(position = "dodge") + 
   labs(x = "Most Points Scored in a Game", title = "Single Game Max Points Scored by Position") +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
+```
 
-# Histogram
+### Histogram
+```{r}
 b <- ggplot(skater, aes(penaltyMinutes, fill = fullName))
 
 b + geom_histogram(position = "dodge", bins = 30) +
@@ -335,8 +338,10 @@ b + geom_histogram(position = "dodge", bins = 30) +
   theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(vars(fullName), scales = "free") +
   scale_fill_discrete(name = "Team")
+```
 
-# Box plot
+### Box plot
+```{r}
 c <- ggplot(allComb, aes(x = as.factor(gameTypeId), y = winPercent, fill = as.factor(gameTypeId)))
 
 c + geom_boxplot() + 
@@ -344,8 +349,10 @@ c + geom_boxplot() +
   scale_x_discrete(labels = c("Regular Season", "Post Season")) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_fill_discrete(name = "Game Type", labels = c("Regular Season", "Post Season"))
+```
 
-# Scatter plot
+### Scatter plot
+```{r}
 d <- ggplot(skater, aes(mostPenaltyMinutesOneSeason, mostPointsOneSeason))
 
 d + geom_point(aes(color = positionCode)) +
@@ -370,9 +377,10 @@ e + geom_point(aes(color = dummyWins)) +
        title = "Goals for and Against by Number of Wins") +
   theme(plot.title = element_text(hjust = 0.5)) + 
   scale_color_discrete(name = "Position", labels = c("1000+ Wins", "Under 1000 Wins"))
+```
 
-# Coder's choice violin?
-
+### Violin Plot
+```{r}
 f <- ggplot(goal, aes(as.factor(gamePlayedBin), mostWinsOneSeason))
 
 f + geom_violin(aes(color = gamePlayedBin)) +
@@ -382,7 +390,5 @@ f + geom_violin(aes(color = gamePlayedBin)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_discrete(labels = c("Less than or Equal to 100", "Over 100")) +
   scale_color_discrete(name = "Games Played", labels = c("Less than or Equal to 100", "Over 100"))
-
-
 ```
 

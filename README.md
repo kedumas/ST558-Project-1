@@ -434,7 +434,7 @@ a + geom_bar(position = "dodge") +
   scale_fill_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ### Histogram
 
@@ -448,7 +448,7 @@ b + geom_histogram(position = "dodge", bins = 30) +
   scale_fill_discrete(name = "Team")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 ### Box plot
 
@@ -462,7 +462,7 @@ c + geom_boxplot() +
   scale_fill_discrete(name = "Game Type", labels = c("Regular Season", "Post Season"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ### Scatter plot
 
@@ -476,7 +476,7 @@ d + geom_point(aes(color = positionCode)) +
   scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ``` r
 d + geom_point(aes(color = positionCode)) +
@@ -488,7 +488,7 @@ d + geom_point(aes(color = positionCode)) +
   scale_color_discrete(name = "Position", labels = c("Center", "Defense", "Left Wing", "Right Wing"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
 
 ``` r
 e <- ggplot(regSeason, aes(goalsFor, goalsAgainst))
@@ -501,7 +501,7 @@ e + geom_point(aes(color = dummyWins)) +
   scale_color_discrete(name = "Position", labels = c("1000+ Wins", "Under 1000 Wins"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-3.png)<!-- -->
 
 ### Violin Plot
 
@@ -517,4 +517,4 @@ f + geom_violin(aes(color = gamePlayedBin)) +
   scale_color_discrete(name = "Games Played", labels = c("Less than or Equal to 100", "Over 100"))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->

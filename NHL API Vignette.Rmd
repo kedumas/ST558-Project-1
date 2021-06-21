@@ -203,7 +203,7 @@ TeamStats <- function(name = NULL){
 # Wrapper Function
 Here, franchise is always called so that the name can be converted to an ID number for the other API calls and the numbers should always be up to date.
 If no team was designated in name, then the Montreal Canadiens will be returned for all functions that only output one team.
-```{r wrapper, include = FALSE}
+```{r wrapper}
 StatsNHL <- function(data, name = NULL){
 
   fran1 <- Franchise(name)
@@ -222,17 +222,28 @@ StatsNHL <- function(data, name = NULL){
   invisible()
   
 }
-
-# How to call each of the functions in the wrapper with different ways to call for different teams.
-StatsNHL(data = "franch")
-StatsNHL("totals")
-StatsNHL("seas.records", name = "New York")
-StatsNHL("g.records", name = 3)
-StatsNHL("s.records", name = "BOS")
-StatsNHL("deets")
-StatsNHL("stats")
-StatsNHL("stats", name = "Carolina")
 ```
+
+## Example Calls
+
+How to call each of the functions in the wrapper with different ways to call for different teams.
+
+`StatsNHL(data = "franch")`
+
+`StatsNHL("totals")` 
+
+`StatsNHL("seas.records", name = "New York")`
+
+`StatsNHL("g.records", name = 3)`
+
+`StatsNHL("s.records", name = "BOS")`
+
+`StatsNHL("deets")`
+
+`StatsNHL("stats")`
+
+`StatsNHL("stats", name = "Carolina")`
+
 
 # Using the Functions
 

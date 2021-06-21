@@ -12,6 +12,7 @@ Kera Whitley
     -   [Franchise Details](#franchise-details)
     -   [Franchise Stats](#franchise-stats)
 -   [Wrapper Function](#wrapper-function)
+    -   [Example Calls](#example-calls)
 -   [Using the Functions](#using-the-functions)
     -   [Gathering Information](#gathering-information)
     -   [Creating New Variables](#creating-new-variables)
@@ -223,6 +224,48 @@ Here, franchise is always called so that the name can be converted to an
 ID number for the other API calls and the numbers should always be up to
 date. If no team was designated in name, then the Montreal Canadiens
 will be returned for all functions that only output one team.
+
+``` r
+StatsNHL <- function(data, name = NULL){
+
+  fran1 <- Franchise(name)
+
+  if (data == "franch") return(fran1) else
+    if (data == "totals") return(FranchiseTotals(id = fran1$franchiseId)) else
+      if (data == "seas.records") return(SeasonRecords(id = fran1$franchiseId[1])) else
+        if (data == "g.records") return(GoalieRecords(id = fran1$franchiseId[1])) else
+          if (data == "s.records") return(SkaterRecords(id = fran1$franchiseId[1])) else 
+            if (data == "deets") return(FranchiseDetails(id = fran1$mostRecentTeamId[1])) else
+              if (is.null(name) & data == "stats") return(TeamStats(name)) else
+                if (data == "stats") return(TeamStats(name = fran1$mostRecentTeamId[1])) else
+                  return("Please use keywords 'franch', 'totals', 'seas.records', 'g.records', 's.records',
+                         'deets', or 'stats'")
+
+  invisible()
+  
+}
+```
+
+## Example Calls
+
+How to call each of the functions in the wrapper with different ways to
+call for different teams.
+
+`StatsNHL(data = "franch")`
+
+`StatsNHL("totals")`
+
+`StatsNHL("seas.records", name = "New York")`
+
+`StatsNHL("g.records", name = 3)`
+
+`StatsNHL("s.records", name = "BOS")`
+
+`StatsNHL("deets")`
+
+`StatsNHL("stats")`
+
+`StatsNHL("stats", name = "Carolina")`
 
 # Using the Functions
 
